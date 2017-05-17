@@ -75,7 +75,7 @@ def sentence_sentiment(df):
 	return df
 
 
-def plot_arc(df, components):
+def get_arc(df, components):
 
 	sample_freq = fftpack.fftfreq(len(df), d=1/len(df))
 	sig_fft = fftpack.fft(df.Sentiment.values)
@@ -89,33 +89,61 @@ def plot_arc(df, components):
 	sig_fft[np.abs(sample_freq) > freq] = 0
 	main_sig = fftpack.ifft(sig_fft)
 
-	plt.plot(100*np.arange(len(df)) / len(df), main_sig)
+	return main_sig.real
+
+
+def summary_frame(df, n, window):
+
+	inds = np.floor(np.linspace(window, len(df)-window-1, n)).astype(int)
+
+	FS = summ.FrequencySummarizer()
+	
+	summaries = []
+	for i in inds:
+		text_region = ' '.join(
+			df.sentences[i-window:i+window].values)
+
+		summary = FS.summarize(text_region, 3)
+		summary = [s.replace('\n', '<br>') for s in summary]
+
+		summaries.append(summary)
+
+
+	d = {'Summaries':summaries, 'Locs':np.ceil(np.linspace(0, 100, 20))}
+
+	return pd.DataFrame(data=d)	
+
+
+def plot_arc(arc):
+
+
+	plt.plot(100*np.arange(len(arc)) / len(arc), arc)
 	plt.xlabel('% of book')
-	plt.title('Portrait of the Artist')
 	
 	plt.show()
 
 
-directory = 'texts/'
-book = 'Great_Expectations_by_Charles_Dickens_.txt'
-book = 'portrait_of_the_artist.txt' 
-
-raw_text = de_gutenberger(directory + book)
-
-df = sentences(raw_text)
-df = sentence_sentiment(df)
-
-plot_arc(df, 0)
-
-region = float(input('Select a region to be printed \n'))
-reg_ind = int(region / 100 * len(df))
-
-FS = summ.FrequencySummarizer()
-text_region = ' '.join(df.sentences[reg_ind-10:reg_ind+10].values)
-
-summary = FS.summarize(text_region, 3)
-
-print('Text Summary \n:' + '-'*20)
-[print(s+'\n'+20*'-'+'\n') for s in summary]
+if __name__ == '__main__':
 
 
+	directory = 'texts/'
+	book = 'portrait_of_the_artist.txt' 
+
+	raw_text = de_gutenberger(directory + book)
+
+	df = sentences(raw_text)
+	df = sentence_sentiment(df)
+
+	arc = get_arc(df, 0)
+	plot_arc(arc)
+
+	region = float(input('Select a region to be printed \n'))
+	reg_ind = int(region / 100 * len(df))
+
+	FS = summ.FrequencySummarizer()
+	text_region = ' '.join(df.sentences[reg_ind-20:reg_ind+20].values)
+
+	summary = FS.summarize(text_region, 3)
+
+	print('Text Summary \n:' + '-'*20)
+	[print(s+'\n'+20*'-'+'\n') for s in summary]
